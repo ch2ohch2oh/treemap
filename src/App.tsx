@@ -354,16 +354,10 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
     },
   }), []);
 
-  const total = data.children?.reduce((s, c) => s + (c.value ?? 0), 0) ?? (data.value ?? 0);
-
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <svg ref={svgRef} style={{ display: 'block' }} />
       <div ref={tooltipRef} className="treemap-tooltip" />
-      <div className="stats-bar">
-        <span>Nodes: <strong>{data.children?.length ?? 1}</strong></span>
-        <span>Total ({valueCol}): <strong>{fmt(total)}</strong></span>
-      </div>
     </div>
   );
 });
