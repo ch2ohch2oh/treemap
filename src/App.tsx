@@ -384,12 +384,12 @@ export default function App() {
   const [pasteText, setPasteText] = useState('');
   const [panelWidth, setPanelWidth] = useState(420);
   const [paletteKey, setPaletteKey] = useState<string>('Slate');
-  const [sizeOpen, setSizeOpen] = useState(false);
-  const [canvasW, setCanvasW] = useState<number | null>(null);
-  const [canvasH, setCanvasH] = useState<number | null>(null);
-  // draft values while popover is open
-  const [draftW, setDraftW] = useState(1200);
-  const [draftH, setDraftH] = useState(630);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(1); // 1, 16/9, 4/3, null
+  const [isCustomRatio, setIsCustomRatio] = useState(false);
+  const [customRatio, setCustomRatio] = useState({ w: 16, h: 9 });
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportW, setExportW] = useState(1080);
+  const [exportH, setExportH] = useState(1080);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const treemapRef = useRef<TreemapHandle>(null);
   const rightPanelRef = useRef<HTMLElement>(null);
@@ -406,17 +406,35 @@ export default function App() {
     return () => ro.disconnect();
   }, []);
 
-  // Scale the fixed canvas to always fit inside the right panel (never upscale)
-  const fitScale = canvasW && rightPanelSize.w > 0
-    ? Math.min(1, rightPanelSize.w / canvasW, rightPanelSize.h / canvasH!)
-    : 1;
+  let viewW = rightPanelSize.w;
+  let viewH = rightPanelSize.h;
+  if (aspectRatio && rightPanelSize.w > 0 && rightPanelSize.h > 0) {
+    const pad = 40; // breathing room around the live canvas
+    const availW = Math.max(1, rightPanelSize.w - pad);
+    const availH = Math.max(1, rightPanelSize.h - pad);
+    if (availW / availH > aspectRatio) {
+      viewH = availH;
+      viewW = availH * aspectRatio;
+    } else {
+      viewW = availW;
+      viewH = availW / aspectRatio;
+    }
+  }
 
-  const openSizePopover = useCallback(() => {
-    const size = treemapRef.current?.getSize();
-    setDraftW(canvasW ?? size?.width ?? 1200);
-    setDraftH(canvasH ?? size?.height ?? 800);
-    setSizeOpen(true);
-  }, [canvasW, canvasH]);
+  const openExportPopover = useCallback(() => {
+    let ew = 1080, eh = 1080;
+    if (aspectRatio === null) {
+      const size = treemapRef.current?.getSize();
+      if (size) { ew = size.width; eh = size.height; }
+    } else if (Math.abs(aspectRatio - 16/9) < 0.01) {
+      ew = 1920; eh = 1080;
+    } else if (Math.abs(aspectRatio - 4/3) < 0.01) {
+      ew = 1200; eh = 900;
+    }
+    setExportW(Math.round(ew));
+    setExportH(Math.round(eh));
+    setExportOpen(true);
+  }, [aspectRatio]);
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -520,26 +538,25 @@ export default function App() {
               <button className="btn-ghost" onClick={() => setBreadcrumb([])}>Reset view</button>
             )}
             <div className="export-wrap">
-              <button className="btn-ghost" onClick={openSizePopover}>
+              <button className="btn-ghost" onClick={openExportPopover}>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-                  <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  <path d="M6 1v6M4 5l2 2 2-2M1 9v1.5A.5.5 0 001.5 11h9a.5.5 0 00.5-.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                {canvasW ? `${canvasW}×${canvasH}` : 'Canvas size'}
+                Export PNG
               </button>
-              {sizeOpen && (
+              {exportOpen && (
                 <>
-                  <div className="export-backdrop" onClick={() => setSizeOpen(false)} />
+                  <div className="export-backdrop" onClick={() => setExportOpen(false)} />
                   <div className="export-popover">
-                    <div className="export-popover-title">Canvas size</div>
+                    <div className="export-popover-title">Export Size</div>
                     <div className="export-size-row">
                       <div className="export-field">
                         <label className="export-field-label">Width</label>
                         <input
                           className="export-field-input"
                           type="number" min={100} max={8000} step={10}
-                          value={draftW}
-                          onChange={e => setDraftW(Number(e.target.value))}
+                          value={exportW}
+                          onChange={e => setExportW(Number(e.target.value))}
                         />
                       </div>
                       <span className="export-x">×</span>
@@ -548,51 +565,34 @@ export default function App() {
                         <input
                           className="export-field-input"
                           type="number" min={100} max={8000} step={10}
-                          value={draftH}
-                          onChange={e => setDraftH(Number(e.target.value))}
+                          value={exportH}
+                          onChange={e => setExportH(Number(e.target.value))}
                         />
                       </div>
                       <span className="export-px">px</span>
                     </div>
-                    <div className="export-presets">
-                      {([
-                        [1200, 630,  'Social'],   // Twitter/X, LinkedIn, OG
-                        [1080, 1080, 'Square'],   // Instagram
-                        [1280, 720,  'Slide'],    // 16:9 presentation
-                      ] as const).map(([w, h, l]) => (
-                        <button key={l} className="export-preset" onClick={() => { setDraftW(w); setDraftH(h); }}>{l}</button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {canvasW && (
-                        <button
-                          className="btn-ghost"
-                          style={{ flex: 1, justifyContent: 'center' }}
-                          onClick={() => { setCanvasW(null); setCanvasH(null); setSizeOpen(false); }}
-                        >
-                          Reset
+                    {aspectRatio && (
+                      <div className="export-presets">
+                        <button className="export-preset" onClick={() => {
+                          setExportH(Math.round(exportW / aspectRatio));
+                        }}>
+                          Constrain to view shape
                         </button>
-                      )}
-                      <button
-                        className="btn-upload export-download"
-                        style={{ flex: 2 }}
-                        onClick={() => { setCanvasW(draftW); setCanvasH(draftH); setSizeOpen(false); }}
-                      >
-                        Apply
-                      </button>
-                    </div>
+                      </div>
+                    )}
+                    <button
+                      className="btn-upload export-download"
+                      onClick={() => {
+                        treemapRef.current?.exportPng({ width: exportW, height: exportH });
+                        setExportOpen(false);
+                      }}
+                    >
+                      Download
+                    </button>
                   </div>
                 </>
               )}
             </div>
-            <button className="btn-ghost" onClick={() => treemapRef.current?.exportPng(
-              canvasW ? { width: canvasW, height: canvasH! } : undefined
-            )}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1v6M4 5l2 2 2-2M1 9v1.5A.5.5 0 001.5 11h9a.5.5 0 00.5-.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Export PNG
-            </button>
           </div>
         )}
       </header>
@@ -646,33 +646,90 @@ export default function App() {
 
           {hasData && (
             <div className="panel-section panel-controls">
-              <div className="palette-row">
-                <span className="palette-label">Palette</span>
-                {Object.entries(PALETTES).map(([name, pal]) => {
-                  const stops = [0, 0.25, 0.5, 0.75, 1].map(t =>
-                    d3.interpolateRgb(pal.light, pal.dark)(t)
-                  );
-                  return (
-                    <div
-                      key={name}
-                      className={`palette-swatch${paletteKey === name ? ' active' : ''}`}
-                      title={name}
-                      onClick={() => setPaletteKey(name)}
-                    >
-                      {stops.map((c, i) => <span key={i} style={{ background: c }} />)}
-                    </div>
-                  );
-                })}
+              <div className="field-group">
+                <span className="field-label">Palette</span>
+                <div className="palette-swatches">
+                  {Object.entries(PALETTES).map(([name, pal]) => {
+                    const stops = [0, 0.25, 0.5, 0.75, 1].map(t =>
+                      d3.interpolateRgb(pal.light, pal.dark)(t)
+                    );
+                    return (
+                      <div
+                        key={name}
+                        className={`palette-swatch${paletteKey === name ? ' active' : ''}`}
+                        title={name}
+                        onClick={() => setPaletteKey(name)}
+                      >
+                        {stops.map((c, i) => <span key={i} style={{ background: c }} />)}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="field-group" style={{ padding: '10px 14px 4px' }}>
-                <span className="field-label">Group by</span>
+              <div className="field-group">
+                <span className="field-label">Aspect ratio</span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[
+                    [1, 'Square'],
+                    [16/9, '16:9'],
+                    [4/3, '4:3'],
+                    [null, 'Fluid'],
+                    ['custom', 'Custom']
+                  ].map(([val, label]) => {
+                    const isActive = val === 'custom' ? isCustomRatio : (!isCustomRatio && aspectRatio === val);
+                    return (
+                      <button
+                        key={label as string}
+                        className={`btn-ghost btn-xs${isActive ? ' active' : ''}`}
+                        style={Object.assign({ flex: 1, minWidth: '40px', justifyContent: 'center' }, isActive ? { background: 'var(--border)', color: 'var(--text-primary)' } : {})}
+                        onClick={() => {
+                          if (val === 'custom') {
+                            setIsCustomRatio(true);
+                            setAspectRatio(customRatio.w / customRatio.h);
+                          } else {
+                            setIsCustomRatio(false);
+                            setAspectRatio(val as number | null);
+                          }
+                        }}
+                      >
+                        {label as React.ReactNode}
+                      </button>
+                    );
+                  })}
+                </div>
+                {isCustomRatio && (
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <input
+                      type="number" className="field-select" style={{ width: '60px', padding: '2px 6px' }}
+                      value={customRatio.w}
+                      onChange={e => {
+                        const w = Math.max(1, Number(e.target.value));
+                        setCustomRatio(p => ({ ...p, w }));
+                        setAspectRatio(w / customRatio.h);
+                      }}
+                    />
+                    <span style={{ color: 'var(--text-muted)' }}>:</span>
+                    <input
+                      type="number" className="field-select" style={{ width: '60px', padding: '2px 6px' }}
+                      value={customRatio.h}
+                      onChange={e => {
+                        const h = Math.max(1, Number(e.target.value));
+                        setCustomRatio(p => ({ ...p, h }));
+                        setAspectRatio(customRatio.w / h);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="field-group row">
+                <span className="field-label" style={{ width: '60px' }}>Group by</span>
                 <select className="field-select" value={groupCol} onChange={e => { setGroupCol(e.target.value); setBreadcrumb([]); }}>
                   {strCols.map(c => <option key={c} value={c}>{c}</option>)}
                   {numCols.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div className="field-group">
-                <span className="field-label">Value</span>
+              <div className="field-group row">
+                <span className="field-label" style={{ width: '60px' }}>Value</span>
                 <select className="field-select" value={valueCol} onChange={e => { setValueCol(e.target.value); setBreadcrumb([]); }}>
                   {numCols.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -688,48 +745,19 @@ export default function App() {
         <main
           ref={rightPanelRef}
           className="right-panel"
-          style={canvasW ? { display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' } : undefined}
+          style={aspectRatio ? { display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' } : undefined}
         >
           {hasData ? (
-            canvasW ? (
-              // Fixed size: render at full res, scale visually to fit panel
-              <div style={{
-                width: canvasW * fitScale,
-                height: canvasH! * fitScale,
-                flexShrink: 0,
-                position: 'relative',
-              }}>
-                <div style={{
-                  width: canvasW,
-                  height: canvasH!,
-                  transform: `scale(${fitScale})`,
-                  transformOrigin: 'top left',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                }}>
-                  <TreemapViz
-                    ref={treemapRef}
-                    data={treeData!}
-                    valueCol={valueCol}
-                    allCols={cols}
-                    palette={PALETTES[paletteKey]}
-                    onDrill={handleDrill}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div style={{ width: '100%', height: '100%' }}>
-                <TreemapViz
-                  ref={treemapRef}
-                  data={treeData!}
-                  valueCol={valueCol}
-                  allCols={cols}
-                  palette={PALETTES[paletteKey]}
-                  onDrill={handleDrill}
-                />
-              </div>
-            )
+             <div style={aspectRatio ? { width: viewW, height: viewH, flexShrink: 0, position: 'relative' } : { width: '100%', height: '100%' }}>
+               <TreemapViz
+                 ref={treemapRef}
+                 data={treeData!}
+                 valueCol={valueCol}
+                 allCols={cols}
+                 palette={PALETTES[paletteKey]}
+                 onDrill={handleDrill}
+               />
+             </div>
           ) : (
             <div className="treemap-placeholder">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none" opacity="0.25">
