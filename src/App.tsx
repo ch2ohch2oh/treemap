@@ -446,7 +446,7 @@ export default function App() {
     window.addEventListener('mouseup', onUp);
   }, [panelWidth]);
 
-  const loadCSVText = useCallback((text: string, name = 'pasted') => {
+  const loadCSVText = useCallback((text: string, name = '') => {
     const parsed = parseCSV(text);
     if (parsed.length === 0) { setError('Could not parse CSV — check the format.'); return; }
     setError('');
@@ -600,7 +600,11 @@ export default function App() {
           <div className="panel-section">
             <div className="paste-inline-header">
               <span className="paste-inline-label">CSV</span>
-              <button className="btn-ghost btn-xs" onClick={() => setPasteText(EXAMPLE_CSV)}>Example</button>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button className="btn-ghost btn-xs" onClick={() => { setPasteText(''); setRows([]); setFilename(''); setError(''); }}>Clear</button>
+                <button className="btn-ghost btn-xs" onClick={() => fileInputRef.current?.click()}>Upload</button>
+                <button className="btn-ghost btn-xs" onClick={() => setPasteText(EXAMPLE_CSV)}>Example</button>
+              </div>
             </div>
             <textarea
               className="panel-textarea"
@@ -609,34 +613,34 @@ export default function App() {
               onChange={e => setPasteText(e.target.value)}
               spellCheck={false}
             />
+            <div
+              className={`drop-zone${dragOver ? ' drag-over' : ''}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              style={{ borderTop: '1px solid var(--border)' }}
+            >
+              <svg className="drop-icon" width="20" height="20" viewBox="0 0 32 32" fill="none">
+                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M16 10v12M11 15l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="drop-title">{filename || 'Drop CSV or click to upload'}</span>
+            </div>
+            <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileInput} />
             <div className="panel-footer">
               <span className="paste-hint">
                 {pasteText.trim() ? `${pasteText.trim().split('\n').length} lines` : ''}
               </span>
               <button
                 className="btn-upload"
-                disabled={!pasteText.trim()}
+                disabled={!pasteText.trim() && !hasData}
                 onClick={() => { if (pasteText.trim()) loadCSVText(pasteText); }}
               >
                 Visualize
               </button>
             </div>
           </div>
-
-          <div
-            className={`drop-zone${dragOver ? ' drag-over' : ''}`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-          >
-            <svg className="drop-icon" width="20" height="20" viewBox="0 0 32 32" fill="none">
-              <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M16 10v12M11 15l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="drop-title">{filename || 'Drop CSV or click to upload'}</span>
-          </div>
-          <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileInput} />
 
           {hasData && (
             <div className="panel-section panel-controls">
