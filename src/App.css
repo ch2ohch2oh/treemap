@@ -94,6 +94,103 @@
 .btn-upload:hover { opacity: 0.85; }
 .btn-upload:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Export popover ── */
+.export-wrap {
+  position: relative;
+}
+.export-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+.export-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.export-popover-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.export-size-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.export-field-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.export-field-input {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.export-field-input:focus { border-color: #aaa; }
+.export-x {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
+.export-px {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-bottom: 5px;
+  flex-shrink: 0;
+}
+.export-presets {
+  display: flex;
+  gap: 6px;
+}
+.export-preset {
+  flex: 1;
+  padding: 4px 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.export-preset:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+.export-download {
+  width: 100%;
+  justify-content: center;
+  padding: 7px 0;
+}
+
 /* ── Body (left + right) ── */
 .body {
   display: flex;

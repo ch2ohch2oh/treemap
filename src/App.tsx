@@ -102,7 +102,8 @@ interface TreemapProps {
 }
 
 interface TreemapHandle {
-  exportPng: () => void;
+  exportPng: (opts?: { width?: number; height?: number }) => void;
+  getSize: () => { width: number; height: number };
 }
 
 const TreemapViz = forwardRef<TreemapHandle, TreemapProps>(
@@ -262,21 +263,28 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
   }, [data, valueCol, allCols, onDrill, palette]);
 
   useImperativeHandle(ref, () => ({
-    exportPng() {
+    getSize() {
+      const c = containerRef.current;
+      return { width: c?.clientWidth ?? 1200, height: c?.clientHeight ?? 800 };
+    },
+    exportPng({ width, height }: { width?: number; height?: number } = {}) {
       const svg = svgRef.current;
       const container = containerRef.current;
       if (!svg || !container) return;
-      const W = container.clientWidth;
-      const H = container.clientHeight;
+      const srcW = container.clientWidth;
+      const srcH = container.clientHeight;
+      const W = width ?? srcW;
+      const H = height ?? srcH;
 
-      // Clone SVG and add white background
+      // Scale SVG viewBox from source to target dimensions
       const clone = svg.cloneNode(true) as SVGSVGElement;
       clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.setAttribute('viewBox', `0 0 ${srcW} ${srcH}`);
       clone.setAttribute('width', String(W));
       clone.setAttribute('height', String(H));
       const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      bg.setAttribute('width', String(W));
-      bg.setAttribute('height', String(H));
+      bg.setAttribute('width', String(srcW));
+      bg.setAttribute('height', String(srcH));
       bg.setAttribute('fill', '#f8f8f7');
       clone.insertBefore(bg, clone.firstChild);
 
@@ -286,15 +294,15 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const scale = window.devicePixelRatio || 2;
-        canvas.width = W * scale;
-        canvas.height = H * scale;
+        const dpr = window.devicePixelRatio || 2;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
         const ctx = canvas.getContext('2d')!;
-        ctx.scale(scale, scale);
+        ctx.scale(dpr, dpr);
         ctx.drawImage(img, 0, 0, W, H);
         URL.revokeObjectURL(url);
         const a = document.createElement('a');
-        a.download = 'treemap.png';
+        a.download = `treemap-${W}x${H}.png`;
         a.href = canvas.toDataURL('image/png');
         a.click();
       };
@@ -332,8 +340,21 @@ export default function App() {
   const [pasteText, setPasteText] = useState('');
   const [panelWidth, setPanelWidth] = useState(420);
   const [paletteKey, setPaletteKey] = useState<string>('Slate');
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const [canvasW, setCanvasW] = useState<number | null>(null);
+  const [canvasH, setCanvasH] = useState<number | null>(null);
+  // draft values while popover is open
+  const [draftW, setDraftW] = useState(1200);
+  const [draftH, setDraftH] = useState(800);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const treemapRef = useRef<TreemapHandle>(null);
+
+  const openSizePopover = useCallback(() => {
+    const size = treemapRef.current?.getSize();
+    setDraftW(canvasW ?? size?.width ?? 1200);
+    setDraftH(canvasH ?? size?.height ?? 800);
+    setSizeOpen(true);
+  }, [canvasW, canvasH]);
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -436,7 +457,71 @@ export default function App() {
             {breadcrumb.length > 0 && (
               <button className="btn-ghost" onClick={() => setBreadcrumb([])}>Reset view</button>
             )}
-            <button className="btn-ghost" onClick={() => treemapRef.current?.exportPng()}>
+            <div className="export-wrap">
+              <button className="btn-ghost" onClick={openSizePopover}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M4 6h4M6 4v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                {canvasW ? `${canvasW}×${canvasH}` : 'Canvas size'}
+              </button>
+              {sizeOpen && (
+                <>
+                  <div className="export-backdrop" onClick={() => setSizeOpen(false)} />
+                  <div className="export-popover">
+                    <div className="export-popover-title">Canvas size</div>
+                    <div className="export-size-row">
+                      <div className="export-field">
+                        <label className="export-field-label">Width</label>
+                        <input
+                          className="export-field-input"
+                          type="number" min={100} max={8000} step={10}
+                          value={draftW}
+                          onChange={e => setDraftW(Number(e.target.value))}
+                        />
+                      </div>
+                      <span className="export-x">×</span>
+                      <div className="export-field">
+                        <label className="export-field-label">Height</label>
+                        <input
+                          className="export-field-input"
+                          type="number" min={100} max={8000} step={10}
+                          value={draftH}
+                          onChange={e => setDraftH(Number(e.target.value))}
+                        />
+                      </div>
+                      <span className="export-px">px</span>
+                    </div>
+                    <div className="export-presets">
+                      {([[1280,720,'720p'],[1920,1080,'1080p'],[2560,1440,'1440p']] as const).map(([w,h,l]) => (
+                        <button key={l} className="export-preset" onClick={() => { setDraftW(w); setDraftH(h); }}>{l}</button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {canvasW && (
+                        <button
+                          className="btn-ghost"
+                          style={{ flex: 1, justifyContent: 'center' }}
+                          onClick={() => { setCanvasW(null); setCanvasH(null); setSizeOpen(false); }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                      <button
+                        className="btn-upload export-download"
+                        style={{ flex: 2 }}
+                        onClick={() => { setCanvasW(draftW); setCanvasH(draftH); setSizeOpen(false); }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <button className="btn-ghost" onClick={() => treemapRef.current?.exportPng(
+              canvasW ? { width: canvasW, height: canvasH! } : undefined
+            )}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M6 1v6M4 5l2 2 2-2M1 9v1.5A.5.5 0 001.5 11h9a.5.5 0 00.5-.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -529,16 +614,18 @@ export default function App() {
         <div className="resize-handle" onMouseDown={startResize} />
 
         {/* Right panel — treemap or placeholder */}
-        <main className="right-panel">
+        <main className="right-panel" style={canvasW ? { overflow: 'auto' } : undefined}>
           {hasData ? (
-            <TreemapViz
-              ref={treemapRef}
-              data={treeData!}
-              valueCol={valueCol}
-              allCols={cols}
-              palette={PALETTES[paletteKey]}
-              onDrill={handleDrill}
-            />
+            <div style={canvasW ? { width: canvasW, height: canvasH!, flexShrink: 0 } : { width: '100%', height: '100%' }}>
+              <TreemapViz
+                ref={treemapRef}
+                data={treeData!}
+                valueCol={valueCol}
+                allCols={cols}
+                palette={PALETTES[paletteKey]}
+                onDrill={handleDrill}
+              />
+            </div>
           ) : (
             <div className="treemap-placeholder">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none" opacity="0.25">
