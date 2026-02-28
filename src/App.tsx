@@ -446,7 +446,7 @@ export default function App() {
     window.addEventListener('mouseup', onUp);
   }, [panelWidth]);
 
-  const loadCSVText = useCallback((text: string, name = 'pasted') => {
+  const loadCSVText = useCallback((text: string, name = '') => {
     const parsed = parseCSV(text);
     if (parsed.length === 0) { setError('Could not parse CSV — check the format.'); return; }
     setError('');
