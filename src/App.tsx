@@ -389,7 +389,7 @@ export default function App() {
   const [canvasH, setCanvasH] = useState<number | null>(null);
   // draft values while popover is open
   const [draftW, setDraftW] = useState(1200);
-  const [draftH, setDraftH] = useState(800);
+  const [draftH, setDraftH] = useState(630);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const treemapRef = useRef<TreemapHandle>(null);
 
@@ -537,7 +537,11 @@ export default function App() {
                       <span className="export-px">px</span>
                     </div>
                     <div className="export-presets">
-                      {([[1280,720,'720p'],[1920,1080,'1080p'],[2560,1440,'1440p']] as const).map(([w,h,l]) => (
+                      {([
+                        [1200, 630,  'Social'],   // Twitter/X, LinkedIn, OG
+                        [1080, 1080, 'Square'],   // Instagram
+                        [1280, 720,  'Slide'],    // 16:9 presentation
+                      ] as const).map(([w, h, l]) => (
                         <button key={l} className="export-preset" onClick={() => { setDraftW(w); setDraftH(h); }}>{l}</button>
                       ))}
                     </div>
@@ -662,8 +666,11 @@ export default function App() {
         {/* Resize handle */}
         <div className="resize-handle" onMouseDown={startResize} />
 
-        {/* Right panel — treemap or placeholder */}
-        <main className="right-panel" style={canvasW ? { overflow: 'auto' } : undefined}>
+        {/* Right panel — treemap or placeholder, centers fixed canvas */}
+        <main
+          className="right-panel"
+          style={canvasW ? { overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } : undefined}
+        >
           {hasData ? (
             <div style={canvasW ? { width: canvasW, height: canvasH!, flexShrink: 0 } : { width: '100%', height: '100%' }}>
               <TreemapViz
