@@ -1,0 +1,394 @@
+/* ── Layout ── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  height: 48px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.header-logo {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.header-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Breadcrumb in header (side-by-side mode) */
+.breadcrumb-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Ghost button ── */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn-ghost:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+.btn-xs {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+/* ── Upload button ── */
+.btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn-upload:hover { opacity: 0.85; }
+.btn-upload:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Body (left + right) ── */
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Left panel ── */
+.left-panel {
+  width: 420px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Resize handle ── */
+.resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background 0.15s;
+}
+.resize-handle:hover,
+.resize-handle:active {
+  background: #bbb;
+}
+
+/* ── Palette picker ── */
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.palette-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 2px;
+}
+.palette-swatch {
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.palette-swatch.active {
+  border-color: var(--accent);
+}
+.palette-swatch span {
+  display: block;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+/* ── Panel sections ── */
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+
+.paste-inline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.paste-inline-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panel-textarea {
+  display: block;
+  width: 100%;
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  font-family: 'SFMono-Regular', 'Menlo', monospace;
+  border: none;
+  outline: none;
+  resize: none;
+  background: var(--surface);
+  color: var(--text-primary);
+  line-height: 1.7;
+  min-height: 0;
+}
+.panel-textarea::placeholder { color: var(--text-muted); }
+
+.panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+.paste-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 40px;
+}
+
+/* ── Drop zone ── */
+.drop-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  background: rgba(0,0,0,0.02);
+}
+
+.drop-icon {
+  color: var(--text-muted);
+  opacity: 0.45;
+  flex-shrink: 0;
+}
+.drop-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Column controls (in left panel) ── */
+.panel-controls {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: none;
+}
+
+.field-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.field-select {
+  height: 26px;
+  padding: 0 6px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+.field-select:focus { border-color: #aaa; }
+
+/* ── Right panel ── */
+.right-panel {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+}
+
+/* ── Treemap placeholder ── */
+.treemap-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.placeholder-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Panel error ── */
+.panel-error {
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #c00;
+  background: #fff0f0;
+  border-bottom: 1px solid #fcc;
+}
+
+/* ── Tooltip ── */
+.treemap-tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  z-index: 1000;
+  max-width: 260px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.treemap-tooltip.visible { opacity: 1; }
+
+.tooltip-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+.tooltip-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.tooltip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11px;
+}
+.tooltip-key { color: var(--text-muted); }
+.tooltip-val { color: var(--text-primary); font-weight: 500; }
+
+/* ── Breadcrumb (in header) ── */
+.breadcrumb-item {
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.15s;
+}
+.breadcrumb-item:hover { color: var(--text-primary); }
+.breadcrumb-sep { color: var(--border); margin: 0 2px; }
+.breadcrumb-current { color: var(--text-primary); font-weight: 500; cursor: default; }
+
+/* ── Stats bar ── */
+.stats-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-size: 11px;
+  color: var(--text-muted);
+  z-index: 10;
+  white-space: nowrap;
+}
+.stats-bar strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}

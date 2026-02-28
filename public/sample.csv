@@ -1,0 +1,27 @@
+category,subcategory,product,revenue,units
+Technology,Software,CRM Platform,4200000,840
+Technology,Software,Analytics Suite,3100000,620
+Technology,Software,Security Tool,1800000,360
+Technology,Hardware,Laptops,2900000,580
+Technology,Hardware,Servers,3800000,190
+Technology,Hardware,Peripherals,950000,1900
+Healthcare,Devices,MRI Machines,5200000,52
+Healthcare,Devices,Ultrasound,2700000,270
+Healthcare,Pharma,Oncology Drugs,6100000,1220
+Healthcare,Pharma,Cardiovascular,4300000,860
+Healthcare,Services,Consulting,1400000,280
+Finance,Banking,Retail Loans,3600000,720
+Finance,Banking,Mortgages,8200000,410
+Finance,Insurance,Life Insurance,2100000,1050
+Finance,Insurance,Property,1700000,850
+Finance,Investment,Equities,5500000,1100
+Finance,Investment,Bonds,3200000,640
+Retail,Apparel,Men's Wear,1200000,2400
+Retail,Apparel,Women's Wear,1900000,3800
+Retail,Electronics,Smartphones,4700000,940
+Retail,Electronics,Tablets,2300000,460
+Retail,Home,Furniture,1600000,320
+Energy,Renewables,Solar Panels,3400000,340
+Energy,Renewables,Wind Turbines,4100000,82
+Energy,Oil & Gas,Exploration,6800000,68
+Energy,Oil & Gas,Refining,5100000,102
