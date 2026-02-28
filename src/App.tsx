@@ -646,25 +646,27 @@ export default function App() {
 
           {hasData && (
             <div className="panel-section panel-controls">
-              <div className="palette-row">
-                <span className="palette-label">Palette</span>
-                {Object.entries(PALETTES).map(([name, pal]) => {
-                  const stops = [0, 0.25, 0.5, 0.75, 1].map(t =>
-                    d3.interpolateRgb(pal.light, pal.dark)(t)
-                  );
-                  return (
-                    <div
-                      key={name}
-                      className={`palette-swatch${paletteKey === name ? ' active' : ''}`}
-                      title={name}
-                      onClick={() => setPaletteKey(name)}
-                    >
-                      {stops.map((c, i) => <span key={i} style={{ background: c }} />)}
-                    </div>
-                  );
-                })}
+              <div className="field-group">
+                <span className="field-label">Palette</span>
+                <div className="palette-swatches">
+                  {Object.entries(PALETTES).map(([name, pal]) => {
+                    const stops = [0, 0.25, 0.5, 0.75, 1].map(t =>
+                      d3.interpolateRgb(pal.light, pal.dark)(t)
+                    );
+                    return (
+                      <div
+                        key={name}
+                        className={`palette-swatch${paletteKey === name ? ' active' : ''}`}
+                        title={name}
+                        onClick={() => setPaletteKey(name)}
+                      >
+                        {stops.map((c, i) => <span key={i} style={{ background: c }} />)}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="field-group" style={{ padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="field-group">
                 <span className="field-label">Aspect ratio</span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {[
@@ -719,15 +721,15 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <div className="field-group" style={{ padding: '4px 14px 4px' }}>
-                <span className="field-label">Group by</span>
+              <div className="field-group row">
+                <span className="field-label" style={{ width: '60px' }}>Group by</span>
                 <select className="field-select" value={groupCol} onChange={e => { setGroupCol(e.target.value); setBreadcrumb([]); }}>
                   {strCols.map(c => <option key={c} value={c}>{c}</option>)}
                   {numCols.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div className="field-group">
-                <span className="field-label">Value</span>
+              <div className="field-group row">
+                <span className="field-label" style={{ width: '60px' }}>Value</span>
                 <select className="field-select" value={valueCol} onChange={e => { setValueCol(e.target.value); setBreadcrumb([]); }}>
                   {numCols.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
