@@ -64,12 +64,13 @@ function buildHierarchy(rows: Row[], groupCols: string[], valueCol: string): Tre
 }
 
 // ── Color palettes ────────────────────────────────────────────────────────
-const PALETTES: Record<string, string[]> = {
-  Slate:  ['#3d3d3b','#6b6b68','#9b9b97','#c5c5c2','#b0b5a8','#8a9482','#6e7d65','#4e5e48','#b5aaa0','#9f8f82','#856e60','#6a4f3e'],
-  Ocean:  ['#1a4a6b','#1f6a9a','#2b8abf','#5ba8d4','#3d7a8a','#52a19b','#6bb8a8','#93ccb8','#2d5986','#4476a8','#6096c0','#86b5d6'],
-  Forest: ['#2d5a27','#3d7a34','#52a045','#76bc62','#4a7c40','#609855','#7bb66a','#9dd088','#3b6b35','#508745','#6aa459','#8dc270'],
-  Dusk:   ['#4a2060','#6b3590','#8f52b8','#b07fd0','#6b3060','#945080','#b87090','#d098b0','#3d2550','#5a3a78','#7d559a','#a078bc'],
-  Ember:  ['#7a1a0a','#a83020','#cc5030','#e07858','#8a4010','#b06828','#d09040','#e8b870','#5a2008','#804020','#a86030','#c88858'],
+interface PaletteRange { light: string; dark: string; }
+const PALETTES: Record<string, PaletteRange> = {
+  Slate:  { light: '#d0d0ce', dark: '#232321' },
+  Ocean:  { light: '#a8d8ea', dark: '#0d2d4a' },
+  Forest: { light: '#b8ddb0', dark: '#1a3d14' },
+  Dusk:   { light: '#d8b8e8', dark: '#280d40' },
+  Ember:  { light: '#f0d090', dark: '#5a0a02' },
 };
 
 // ── Example CSV ───────────────────────────────────────────────────────────
@@ -97,7 +98,7 @@ interface TreemapProps {
   data: TreeNode;
   valueCol: string;
   allCols: string[];
-  palette: string[];
+  palette: PaletteRange;
   onDrill: (name: string) => void;
 }
 
@@ -121,19 +122,25 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
     const W = container.clientWidth;
     const H = container.clientHeight;
 
-    const topNames = data.children?.map(c => c.name) ?? [data.name];
-    const colorMap = new Map(
-      topNames.map((n, i) => [n, palette[i % palette.length]]),
-    );
-    function getColor(d: RectNode): string {
-      let node: RectNode | null = d;
-      while (node?.depth && node.depth > 1) node = node.parent as RectNode | null;
-      return colorMap.get(node?.data.name ?? '') ?? palette[0];
-    }
-
     const hierarchy = d3.hierarchy<TreeNode>(data)
       .sum(d => d.value ?? 0)
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+
+    // Value-based sequential color scale: larger value = darker color
+    const leaves0 = hierarchy.leaves();
+    const vals = leaves0.map(d => d.value ?? 0);
+    const minV = Math.min(...vals);
+    const maxV = Math.max(...vals);
+    const colorScale = d3.scaleSequential(
+      d3.interpolateRgb(palette.light, palette.dark)
+    ).domain([minV, maxV]);
+
+    function getColor(d: RectNode): string {
+      // Walk to first ancestor with no children (leaf) to get its value
+      let node: RectNode = d;
+      while (node.children) node = node.children[0] as RectNode;
+      return colorScale(node.value ?? minV);
+    }
 
     const treemapLayout = d3.treemap<TreeNode>()
       .size([W, H])
@@ -156,12 +163,23 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
     const cw = (d: RectNode) => Math.max(0, d.x1 - d.x0);
     const ch = (d: RectNode) => Math.max(0, d.y1 - d.y0);
 
+    // Define a clipPath for each leaf cell so text is always contained
+    const defs = d3.select(svg).append('defs');
+    leaves.forEach((d, i) => {
+      defs.append('clipPath')
+        .attr('id', `clip-${i}`)
+        .append('rect')
+        .attr('width', cw(d))
+        .attr('height', ch(d));
+    });
+
     // Leaf cells
     const cellG = g.selectAll<SVGGElement, RectNode>('g.cell')
       .data(leaves)
       .join('g')
       .attr('class', 'cell')
       .attr('transform', d => `translate(${d.x0},${d.y0})`)
+      .attr('clip-path', (_d, i) => `url(#clip-${i})`)
       .style('cursor', 'default');
 
     cellG.append('rect')
@@ -177,54 +195,80 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
 
     cellG.each(function (d) {
       const w = cw(d), h = ch(d);
-      if (w < 36 || h < 20) return;
+      if (w < 28 || h < 18) return;
       const sel = d3.select(this);
       const bright = d3.hsl(getColor(d)).l > 0.5;
-      const textColor = bright ? 'rgba(0,0,0,0.78)' : 'rgba(255,255,255,0.9)';
+      const textColor = bright ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)';
+      const subColor  = bright ? 'rgba(0,0,0,0.52)' : 'rgba(255,255,255,0.58)';
 
-      if (h >= 42 && w >= 70) {
-        const fs = Math.min(15, w / 7);
+      const name = d.data.name;
+      const valStr = fmt(d.value ?? 0);
+      const pad = 8;
+      const usableW = w - pad * 2;
+
+      // Compute font size: fill the width based on character count,
+      // then cap by a fraction of cell height so it never overflows.
+      const charWidth = 0.55; // avg char width as fraction of font-size (Inter)
+      const showValue = h >= 52 && w >= 44;
+      const lines = showValue ? 2 : 1;
+
+      // Start from width-filling size, then cap to keep text inside the cell
+      let fs = Math.min(
+        usableW / (name.length * charWidth),   // fill width
+        (h - 12) / (lines * 1.55),             // fit all lines + padding vertically
+        Math.max(usableW / 6, 11),             // min readable
+        56                                     // absolute cap
+      );
+      fs = Math.max(fs, 9);
+
+      // Center vertically
+      const lineH    = fs * 1.25;
+      const totalH   = showValue ? lineH + fs * 0.85 + 4 : lineH;
+      const topY     = (h - totalH) / 2 + lineH * 0.82;
+
+      // Clamp name to fit
+      const maxChars = Math.max(1, Math.floor(usableW / (fs * charWidth)));
+      const label = name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name;
+
+      sel.append('text')
+        .attr('x', w / 2).attr('y', topY)
+        .attr('text-anchor', 'middle')
+        .attr('fill', textColor)
+        .attr('font-size', fs)
+        .attr('font-weight', '700')
+        .attr('font-family', 'Inter, system-ui, sans-serif')
+        .attr('letter-spacing', fs > 20 ? '-0.02em' : '0')
+        .text(label);
+
+      if (showValue) {
+        const vfs = Math.max(fs * 0.62, 9);
         sel.append('text')
-          .attr('x', 8).attr('y', fs + 2).attr('fill', textColor)
-          .attr('font-size', fs).attr('font-weight', '500')
+          .attr('x', w / 2).attr('y', topY + lineH * 0.75 + vfs * 0.9)
+          .attr('text-anchor', 'middle')
+          .attr('fill', subColor)
+          .attr('font-size', vfs)
+          .attr('font-weight', '500')
           .attr('font-family', 'Inter, system-ui, sans-serif')
-          .text(() => {
-            const name = d.data.name;
-            const maxChars = Math.floor((w - 16) / (fs * 0.58));
-            return name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name;
-          });
-        sel.append('text')
-          .attr('x', 8).attr('y', fs + 18).attr('fill', textColor)
-          .attr('font-size', 12).attr('font-family', 'Inter, system-ui, sans-serif')
-          .attr('opacity', 0.65).text(fmt(d.value ?? 0));
-      } else if (w >= 50) {
-        const fs = Math.min(13, w / 7);
-        sel.append('text')
-          .attr('x', 8).attr('y', fs + 2).attr('fill', textColor)
-          .attr('font-size', fs).attr('font-weight', '500')
-          .attr('font-family', 'Inter, system-ui, sans-serif')
-          .text(() => {
-            const name = d.data.name;
-            const maxChars = Math.floor((w - 16) / (fs * 0.58));
-            return name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name;
-          });
+          .text(valStr);
       }
     });
 
-    // Group headers
+    // Group headers — large, bold, upper-area label
     groups.forEach(g2 => {
       const gw = g2.x1 - g2.x0;
-      if (gw < 40) return;
+      const gh = g2.y1 - g2.y0;
+      if (gw < 40 || gh < 16) return;
+      const name = g2.data.name;
+      const fs = Math.min(13, gw / (name.length * 0.6 + 2));
+      const maxChars = Math.max(1, Math.floor((gw - 16) / (fs * 0.6)));
+      const label = name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name;
       d3.select(svg).append('text')
-        .attr('x', g2.x0 + 8).attr('y', g2.y0 + 15)
-        .attr('fill', '#1a1a18').attr('font-size', 13).attr('font-weight', '600')
-        .attr('font-family', 'Inter, system-ui, sans-serif').attr('opacity', 0.85)
-        .text(() => {
-          const name = g2.data.name;
-          const maxChars = Math.floor((gw - 16) / 8);
-          return name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name;
-        });
+        .attr('x', g2.x0 + 8).attr('y', g2.y0 + fs + 2)
+        .attr('fill', '#1a1a18').attr('font-size', fs).attr('font-weight', '700')
+        .attr('font-family', 'Inter, system-ui, sans-serif').attr('opacity', 0.75)
+        .text(label);
     });
+
 
     // Drillable group overlay (depth-1 groups)
     const groupCells = g.selectAll<SVGGElement, RectNode>('g.group-overlay')
@@ -582,16 +626,21 @@ export default function App() {
             <div className="panel-section panel-controls">
               <div className="palette-row">
                 <span className="palette-label">Palette</span>
-                {Object.entries(PALETTES).map(([name, colors]) => (
-                  <div
-                    key={name}
-                    className={`palette-swatch${paletteKey === name ? ' active' : ''}`}
-                    title={name}
-                    onClick={() => setPaletteKey(name)}
-                  >
-                    {colors.slice(0, 5).map((c, i) => <span key={i} style={{ background: c }} />)}
-                  </div>
-                ))}
+                {Object.entries(PALETTES).map(([name, pal]) => {
+                  const stops = [0, 0.25, 0.5, 0.75, 1].map(t =>
+                    d3.interpolateRgb(pal.light, pal.dark)(t)
+                  );
+                  return (
+                    <div
+                      key={name}
+                      className={`palette-swatch${paletteKey === name ? ' active' : ''}`}
+                      title={name}
+                      onClick={() => setPaletteKey(name)}
+                    >
+                      {stops.map((c, i) => <span key={i} style={{ background: c }} />)}
+                    </div>
+                  );
+                })}
               </div>
               <div className="field-group" style={{ padding: '10px 14px 4px' }}>
                 <span className="field-label">Group by</span>
