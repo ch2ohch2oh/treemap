@@ -613,34 +613,34 @@ export default function App() {
               onChange={e => setPasteText(e.target.value)}
               spellCheck={false}
             />
+            <div
+              className={`drop-zone${dragOver ? ' drag-over' : ''}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              style={{ borderTop: '1px solid var(--border)' }}
+            >
+              <svg className="drop-icon" width="20" height="20" viewBox="0 0 32 32" fill="none">
+                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M16 10v12M11 15l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="drop-title">{filename || 'Drop CSV or click to upload'}</span>
+            </div>
+            <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileInput} />
             <div className="panel-footer">
               <span className="paste-hint">
                 {pasteText.trim() ? `${pasteText.trim().split('\n').length} lines` : ''}
               </span>
               <button
                 className="btn-upload"
-                disabled={!pasteText.trim()}
+                disabled={!pasteText.trim() && !hasData}
                 onClick={() => { if (pasteText.trim()) loadCSVText(pasteText); }}
               >
                 Visualize
               </button>
             </div>
           </div>
-
-          <div
-            className={`drop-zone${dragOver ? ' drag-over' : ''}`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-          >
-            <svg className="drop-icon" width="20" height="20" viewBox="0 0 32 32" fill="none">
-              <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M16 10v12M11 15l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="drop-title">{filename || 'Drop CSV or click to upload'}</span>
-          </div>
-          <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileInput} />
 
           {hasData && (
             <div className="panel-section panel-controls">
