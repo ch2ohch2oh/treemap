@@ -463,25 +463,3 @@
 .breadcrumb-sep { color: var(--border); margin: 0 2px; }
 .breadcrumb-current { color: var(--text-primary); font-weight: 500; cursor: default; }
 
-/* ── Stats bar ── */
-.stats-bar {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 20px;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 6px 18px;
-  font-size: 11px;
-  color: var(--text-muted);
-  z-index: 10;
-  white-space: nowrap;
-}
-.stats-bar strong {
-  color: var(--text-primary);
-  font-weight: 600;
-}
