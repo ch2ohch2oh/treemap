@@ -600,7 +600,11 @@ export default function App() {
           <div className="panel-section">
             <div className="paste-inline-header">
               <span className="paste-inline-label">CSV</span>
-              <button className="btn-ghost btn-xs" onClick={() => setPasteText(EXAMPLE_CSV)}>Example</button>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button className="btn-ghost btn-xs" onClick={() => { setPasteText(''); setRows([]); setFilename(''); setError(''); }}>Clear</button>
+                <button className="btn-ghost btn-xs" onClick={() => fileInputRef.current?.click()}>Upload</button>
+                <button className="btn-ghost btn-xs" onClick={() => setPasteText(EXAMPLE_CSV)}>Example</button>
+              </div>
             </div>
             <textarea
               className="panel-textarea"
