@@ -392,6 +392,24 @@ export default function App() {
   const [draftH, setDraftH] = useState(630);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const treemapRef = useRef<TreemapHandle>(null);
+  const rightPanelRef = useRef<HTMLElement>(null);
+  const [rightPanelSize, setRightPanelSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = rightPanelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setRightPanelSize({ w: width, h: height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Scale the fixed canvas to always fit inside the right panel (never upscale)
+  const fitScale = canvasW && rightPanelSize.w > 0
+    ? Math.min(1, rightPanelSize.w / canvasW, rightPanelSize.h / canvasH!)
+    : 1;
 
   const openSizePopover = useCallback(() => {
     const size = treemapRef.current?.getSize();
@@ -668,20 +686,50 @@ export default function App() {
 
         {/* Right panel — treemap or placeholder, centers fixed canvas */}
         <main
+          ref={rightPanelRef}
           className="right-panel"
-          style={canvasW ? { overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' } : undefined}
+          style={canvasW ? { display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' } : undefined}
         >
           {hasData ? (
-            <div style={canvasW ? { width: canvasW, height: canvasH!, flexShrink: 0 } : { width: '100%', height: '100%' }}>
-              <TreemapViz
-                ref={treemapRef}
-                data={treeData!}
-                valueCol={valueCol}
-                allCols={cols}
-                palette={PALETTES[paletteKey]}
-                onDrill={handleDrill}
-              />
-            </div>
+            canvasW ? (
+              // Fixed size: render at full res, scale visually to fit panel
+              <div style={{
+                width: canvasW * fitScale,
+                height: canvasH! * fitScale,
+                flexShrink: 0,
+                position: 'relative',
+              }}>
+                <div style={{
+                  width: canvasW,
+                  height: canvasH!,
+                  transform: `scale(${fitScale})`,
+                  transformOrigin: 'top left',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}>
+                  <TreemapViz
+                    ref={treemapRef}
+                    data={treeData!}
+                    valueCol={valueCol}
+                    allCols={cols}
+                    palette={PALETTES[paletteKey]}
+                    onDrill={handleDrill}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div style={{ width: '100%', height: '100%' }}>
+                <TreemapViz
+                  ref={treemapRef}
+                  data={treeData!}
+                  valueCol={valueCol}
+                  allCols={cols}
+                  palette={PALETTES[paletteKey]}
+                  onDrill={handleDrill}
+                />
+              </div>
+            )
           ) : (
             <div className="treemap-placeholder">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none" opacity="0.25">
