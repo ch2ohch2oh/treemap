@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import * as d3 from 'd3';
 import './App.css';
 
@@ -101,7 +101,12 @@ interface TreemapProps {
   onDrill: (name: string) => void;
 }
 
-function TreemapViz({ data, valueCol, allCols, palette, onDrill }: TreemapProps) {
+interface TreemapHandle {
+  exportPng: () => void;
+}
+
+const TreemapViz = forwardRef<TreemapHandle, TreemapProps>(
+function TreemapViz({ data, valueCol, allCols, palette, onDrill }, ref) {
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -256,6 +261,47 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }: TreemapProps)
     return () => { d3.select(svg).selectAll('*').remove(); };
   }, [data, valueCol, allCols, onDrill, palette]);
 
+  useImperativeHandle(ref, () => ({
+    exportPng() {
+      const svg = svgRef.current;
+      const container = containerRef.current;
+      if (!svg || !container) return;
+      const W = container.clientWidth;
+      const H = container.clientHeight;
+
+      // Clone SVG and add white background
+      const clone = svg.cloneNode(true) as SVGSVGElement;
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.setAttribute('width', String(W));
+      clone.setAttribute('height', String(H));
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('width', String(W));
+      bg.setAttribute('height', String(H));
+      bg.setAttribute('fill', '#f8f8f7');
+      clone.insertBefore(bg, clone.firstChild);
+
+      const svgStr = new XMLSerializer().serializeToString(clone);
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = window.devicePixelRatio || 2;
+        canvas.width = W * scale;
+        canvas.height = H * scale;
+        const ctx = canvas.getContext('2d')!;
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0, W, H);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.download = 'treemap.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      img.src = url;
+    },
+  }), []);
+
   const total = data.children?.reduce((s, c) => s + (c.value ?? 0), 0) ?? (data.value ?? 0);
 
   return (
@@ -268,7 +314,7 @@ function TreemapViz({ data, valueCol, allCols, palette, onDrill }: TreemapProps)
       </div>
     </div>
   );
-}
+});
 
 
 // ── Main App ───────────────────────────────────────────────────────────────
@@ -287,6 +333,7 @@ export default function App() {
   const [panelWidth, setPanelWidth] = useState(420);
   const [paletteKey, setPaletteKey] = useState<string>('Slate');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const treemapRef = useRef<TreemapHandle>(null);
 
   const startResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -384,9 +431,17 @@ export default function App() {
             </div>
           </>
         )}
-        {hasData && breadcrumb.length > 0 && (
+        {hasData && (
           <div className="header-right">
-            <button className="btn-ghost" onClick={() => setBreadcrumb([])}>Reset view</button>
+            {breadcrumb.length > 0 && (
+              <button className="btn-ghost" onClick={() => setBreadcrumb([])}>Reset view</button>
+            )}
+            <button className="btn-ghost" onClick={() => treemapRef.current?.exportPng()}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1v6M4 5l2 2 2-2M1 9v1.5A.5.5 0 001.5 11h9a.5.5 0 00.5-.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Export PNG
+            </button>
           </div>
         )}
       </header>
@@ -477,6 +532,7 @@ export default function App() {
         <main className="right-panel">
           {hasData ? (
             <TreemapViz
+              ref={treemapRef}
               data={treeData!}
               valueCol={valueCol}
               allCols={cols}
